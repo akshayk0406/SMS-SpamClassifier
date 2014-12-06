@@ -10,6 +10,9 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.pipeline import Pipeline
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.learning_curve import learning_curve
 
 def split_into_words(message):
     message = unicode(message,'utf8')
@@ -18,6 +21,37 @@ def split_into_words(message):
 def split_into_lemma(message):
     words   = split_into_words(message)
     return [word.lemma for word in words]
+
+def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
+                        n_jobs=-1, train_sizes=np.linspace(.1, 1.0, 5)):
+    plt.figure()
+    plt.title(title)
+    if ylim is not None:
+        plt.ylim(*ylim)
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+    plt.grid()
+
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1,
+                     color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+             label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+             label="Cross-validation score")
+
+    plt.legend(loc="best")
+    plt.savefig("plot.png")
+    return plt
+
 
 '''
 Part 1:-
@@ -69,6 +103,14 @@ all_predictions     = Spam_ClassifierNB.predict(test_messages_tfidf)
 print 'accuracy', accuracy_score(label_test, all_predictions)
 print 'confusion matrix\n', confusion_matrix(label_test, all_predictions)
 
+pipeline = Pipeline([
+    ('bow', CountVectorizer(analyzer=split_into_lemma)),  # strings to token integer counts
+    ('tfidf', TfidfTransformer()),  # integer counts to weighted TF-IDF scores
+    ('classifier', MultinomialNB()),  # train on TF-IDF vectors w/ Naive Bayes classifier
+])
+
+plot_learning_curve(pipeline, "accuracy vs. training set size", messages[:train_sample_size]['message'], label_train, cv=5)
+
 '''
 Part 5:-
 Using State Vector Machines for classifiction
@@ -98,8 +140,6 @@ grid_svm = GridSearchCV(
 svm_detector    = grid_svm.fit(messages[:train_sample_size]['message'], label_train)
 all_predictions = svm_detector.predict(messages[train_sample_size:]['message'])
 print 'accuracy', accuracy_score(label_test, all_predictions)
-
-
 
 
 
